@@ -6,7 +6,7 @@
 class ENGINE_API Vector2
 {
 public:
-	Vector2(int y = 0, int x = 0);
+	Vector2(int x = 0, int y = 0);
 	~Vector2();
 
 	Vector2 operator+(const Vector2& other) const;
@@ -25,8 +25,8 @@ public:
 
 public:
 	// X/Y 좌표
-	int y = 0;
 	int x = 0;
+	int y = 0;
 
 private:
 	// 문자열 변수

@@ -7,7 +7,7 @@ Game::Game()
 {
 	instance = this;
 
-	//AddLevel(new AStarLevel());
+	AddLevel(new AStarLevel());
 }
 
 Game::~Game()
@@ -17,8 +17,8 @@ Game::~Game()
 
 void Game::StartAStar(const int currnetRenderSpeed)
 {
-	//Level* newAStarLevel = new AStarLevel(currnetRenderSpeed);
-	//ChangeLevel(newAStarLevel);
+	Level* newAStarLevel = new AStarLevel(currnetRenderSpeed);
+	ChangeLevel(newAStarLevel);
 }
 
 Game& Game::Get()
