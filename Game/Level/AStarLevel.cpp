@@ -10,19 +10,23 @@ AStarLevel::AStarLevel(const int currnetRenderSpeed)
 {
 	width = Engine::Get().Width();
 	height = Engine::Get().Height();
+	obstaclePosition.clear();
 }
 
 void AStarLevel::Tick(float deltaTime)
 {
 	super::Tick(deltaTime);
 
-	// 플레이어와 목표점 위치 설정
+	// 플레이어 & 목표점 & 장애물 위치 설정
 	if (!bIsStart)
 	{
-		SetPlayerPosition();
+		// 장애물을 생성한 프레임에는 플레이어 이동 X
+		if (!SetObstaclePosition())
+		{
+			SetPlayerPosition();
+		}
 		SetDestinationPosition();
 	}
-
 
 
 
@@ -56,6 +60,13 @@ void AStarLevel::Render()
 	{
 		Engine::Get().WriteToBuffer(destinationPosition, "D", Color::Red);
 	}
+	if (!obstaclePosition.empty())
+	{
+		for (const auto& i : obstaclePosition)
+		{
+			Engine::Get().WriteToBuffer(i, "#", Color::Intensity);
+		}
+	}
 
 	if (bIsEnded)
 	{
@@ -80,6 +91,10 @@ void AStarLevel::SetPlayerPosition()
 		if (mousePos.x >= 0 && mousePos.x < width &&
 			mousePos.y >= 0 && mousePos.y < height)
 		{
+			for (const auto& i : obstaclePosition)
+			{
+				if (mousePos == i) return;
+			}
 			playerPosition = mousePos;
 			hasPlayer = true;
 		}
@@ -97,10 +112,51 @@ void AStarLevel::SetDestinationPosition()
 		if (mousePos.x >= 0 && mousePos.x < width &&
 			mousePos.y >= 0 && mousePos.y < height)
 		{
+			for (const auto& i : obstaclePosition)
+			{
+				if (mousePos == i) return;
+			}
 			destinationPosition = mousePos;
 			hasTarget = true;
 		}
 	}
+}
+
+bool AStarLevel::SetObstaclePosition()
+{
+	// 좌클릭 + 스페이스 바: 장애물 위치 설정
+	if (Input::Get().GetMouseLeftButton() && Input::Get().GetKey(VK_SPACE))
+	{
+		Vector2 mousePos = Input::Get().GetMousePosition();
+
+		// 마우스 위치가 유효한 범위인지 확인
+		if (mousePos.x >= 0 && mousePos.x < width &&
+			mousePos.y >= 0 && mousePos.y < height)
+		{
+			// 이미 해당 위치에 장애물이 있는지 검사
+			bool findObstacle = false;
+
+			for (const auto& i : obstaclePosition)
+			{
+				// 해당 위치가 플레이어나 목표 위치인 경우 패스
+				if (i == playerPosition || i == destinationPosition) continue;
+
+				// 이미 해당 위치에 장애물이 있으면 루프 종료
+				if (i == mousePos)
+				{
+					findObstacle = true;
+					break;
+				}
+			}
+
+			if (!findObstacle)
+			{
+				obstaclePosition.emplace_back(mousePos);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void AStarLevel::StartAStar()

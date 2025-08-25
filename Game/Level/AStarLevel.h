@@ -16,9 +16,10 @@ public:
 	virtual void Render() override;
 
 private:
-	// 플레이어/목표점 위치 설정 함수
+	// 플레이어 & 목표점 & 장애물 위치 설정 함수
 	void SetPlayerPosition();
 	void SetDestinationPosition();
+	bool SetObstaclePosition();
 
 	// 외곽 경계 출력 함수
 	void PrintOutLine();
@@ -37,6 +38,9 @@ private:
 	// 플레이어와 목표 위치
 	Vector2 playerPosition = Vector2(-1, -1);
 	Vector2 destinationPosition = Vector2(-1, -1);
+
+	// 장애물 위치
+	std::vector<Vector2> obstaclePosition;
 
 	// 플레이어와 목표가 설정되었는지 여부
 	bool hasPlayer = false;
