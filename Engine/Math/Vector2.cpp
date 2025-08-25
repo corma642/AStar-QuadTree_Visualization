@@ -31,6 +31,13 @@ Vector2 Vector2::operator-(const Vector2& other) const
 	return Vector2(x - other.x, y - other.y);
 }
 
+Vector2& Vector2::operator+=(const Vector2& other)
+{
+	x += other.x;
+	y += other.y;
+	return *this;
+}
+
 bool Vector2::operator==(const Vector2& other) const
 {
 	return x == other.x && y == other.y;
@@ -39,6 +46,12 @@ bool Vector2::operator==(const Vector2& other) const
 bool Vector2::operator!=(const Vector2& other) const
 {
 	return x != other.x || y != other.y;
+}
+
+bool Vector2::operator<(const Vector2& other) const
+{
+	if (y != other.y) return y < other.y;
+	return x < other.x;
 }
 
 Vector2::operator COORD()
