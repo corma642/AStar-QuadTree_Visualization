@@ -17,15 +17,21 @@ namespace Utils
 	}
 
 	// 콘솔 출력 핸들 가져오는 함수
-	inline HANDLE GetConsoleHandle()
+	inline HANDLE GetConsoleInputHandle()
 	{
 		return GetStdHandle(STD_OUTPUT_HANDLE);
+	}
+
+	// 콘솔 입력 핸들 가져오는 함수
+	inline HANDLE GetConsoleOutputHandle()
+	{
+		return GetStdHandle(STD_INPUT_HANDLE);
 	}
 
 	// 콘솔 커서 위치 이동 함수 (COORD ver)
 	inline void SetConsolePosition(COORD coord)
 	{
-		static HANDLE handle = GetConsoleHandle();
+		static HANDLE handle = GetConsoleInputHandle();
 		SetConsoleCursorPosition(handle, coord);
 	}
 
@@ -38,7 +44,7 @@ namespace Utils
 	// 콘솔 텍스트 색상 설정 함수 (WORD ver)
 	inline void SetConsoleTextColor(WORD color)
 	{
-		static HANDLE handle = GetConsoleHandle();
+		static HANDLE handle = GetConsoleInputHandle();
 		SetConsoleTextAttribute(handle, color);
 	}
 

@@ -88,8 +88,8 @@ public:
 	static Engine& Get();
 
 protected:
-	// 엔진/게임 초기화 시 사용 (레벨 추가 등).
-	virtual void OnInitialized();
+	// 콘솔 관련 초기화 함수
+	void OnConsoleInitialize();
 
 	void BeginPlay();
 	void Tick(float deltaTime = 0.0f);

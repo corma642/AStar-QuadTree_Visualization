@@ -25,14 +25,6 @@ Engine::Engine()
 {
 	instance = this;
 
-	// 콘솔 커서 정보
-	CONSOLE_CURSOR_INFO info;
-	info.bVisible = FALSE; // 보기 끄기
-	info.dwSize = 1; // 커서 사이즈 1
-
-	// 콘솔 커서 끄기
-	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
-
 	// 엔진 설정 로드
 	LoadEngineSettings();
 
@@ -50,9 +42,6 @@ Engine::Engine()
 	// 버퍼 교환.
 	Present();
 
-	// 콘솔 창 이벤트 등록
-	SetConsoleCtrlHandler(ConsoleMessageProcedure, TRUE);
-
 	// cls 호출.
 	system("cls");
 }
@@ -60,6 +49,20 @@ Engine::Engine()
 Engine::~Engine()
 {
 	CleanUp();
+}
+
+void Engine::OnConsoleInitialize()
+{
+	// 콘솔 커서 정보
+	CONSOLE_CURSOR_INFO info;
+	info.bVisible = FALSE; // 보기 끄기
+	info.dwSize = 1; // 커서 사이즈 1
+
+	// 콘솔 커서 끄기
+	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
+
+	// 콘솔 창 이벤트 등록
+	SetConsoleCtrlHandler(ConsoleMessageProcedure, TRUE);
 }
 
 void Engine::Run()
@@ -99,8 +102,9 @@ void Engine::Run()
 			(currentTime.QuadPart - previousTime.QuadPart)
 			/ static_cast<float>(frequency.QuadPart);
 
-		// 입력 처리
+		// 입력 처리 [키보드/마우스]
 		input.ProcessInput();
+		input.ProcessMouseInput();
 
 		// 고정 프레임.
 		if (deltaTime >= oneFrameTime)
@@ -204,10 +208,6 @@ void Engine::Quit()
 Engine& Engine::Get()
 {
 	return *instance;
-}
-
-void Engine::OnInitialized()
-{
 }
 
 void Engine::BeginPlay()
