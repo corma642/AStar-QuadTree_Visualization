@@ -3,6 +3,7 @@
 #include <iostream>
 
 // 전역 변수 초기화.
+Vector2 Vector2::Out = Vector2(-1, -1);
 Vector2 Vector2::Zero = Vector2(0, 0);
 Vector2 Vector2::One = Vector2(1, 1);
 Vector2 Vector2::Up = Vector2(0, 1);

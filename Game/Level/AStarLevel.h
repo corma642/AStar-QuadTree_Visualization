@@ -10,6 +10,11 @@
 
 struct Node
 {
+	Node(double inFCost = 0.0, double inGCost = 0.0, Vector2 inPos = Vector2::Out)
+		: fCost(inFCost), gCost(inGCost), pos(inPos)
+	{
+	}
+
 	// 시작 위치에서 목표 위치까지의 비용 + 목표 위지까지의 거리
 	double fCost; // f = g + h
 
@@ -81,10 +86,12 @@ private:
 	void PrintObstacle();
 
 	// 상태별 Tick 수행 함수
-	void IsBefore();
-	void IsEnded();
+	void IsTickBefore();
+	void IsTickEnded();
 
 	// 상태별 Render 수행 함수
+	void IsRenderBefore();
+	void IsRenderPlaying();
 	void IsRenderComputepath();
 	void IsRenderFinalPath();
 	void IsRenderEnded();
@@ -100,6 +107,10 @@ private:
 	int width = 0;
 	int height = 0;
 
+	// 여백 (텍스트 출력용)
+	int tempWidth = 30;
+	int tempHeight = 15;
+
 	// 현재 길찾기 렌더 속도
 	int currnetRenderSpeed = 3;
 
@@ -108,8 +119,8 @@ private:
 	bool hasTarget = false;
 
 	// 플레이어와 목표 위치
-	Vector2 playerPosition = Vector2(-1, -1);
-	Vector2 destinationPosition = Vector2(-1, -1);
+	Vector2 playerPosition = Vector2::Out;
+	Vector2 destinationPosition = Vector2::Out;
 
 	// 장애물 위치
 	std::vector<Vector2> obstaclePosition;
@@ -135,6 +146,13 @@ private:
 	// 길찾기 계산 경로 저장 배열
 	std::vector<Vector2> pathPosition;
 
+	// 목표 위치와 가장 근접한 노드
+	Node bestNearingNode;
+
 	// 최종 경로 저장 배열
 	std::vector<Vector2> finalPath;
+
+	// 경로 출력 인덱스
+	int renderComputePathIndex = 0;
+	int renderFinalPathIndex = 0;
 };

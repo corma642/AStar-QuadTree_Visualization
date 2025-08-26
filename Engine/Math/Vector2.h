@@ -22,6 +22,7 @@ public:
 	operator COORD();
 	operator COORD() const;
 
+	static Vector2 Out;
 	static Vector2 Zero;
 	static Vector2 One;
 	static Vector2 Up;

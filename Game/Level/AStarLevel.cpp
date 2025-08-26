@@ -4,12 +4,11 @@
 
 AStarLevel::AStarLevel(const int currnetRenderSpeed)
 {
-	width = Engine::Get().Width();
-	height = Engine::Get().Height();
-
-	obstaclePosition.clear();
+	width = Engine::Get().Width() - tempWidth;
+	height = Engine::Get().Height() - tempHeight;
 
 	// A-Star 타이머 기본 설정
+	aStarTimer.Reset();
 	aStarTimer.SetTargetTime(0.2f);
 }
 
@@ -21,7 +20,7 @@ void AStarLevel::Tick(float deltaTime)
 	// A-Star 시작 입력 받기
 	if (aStarState == AStarState::IsBefore)
 	{
-		IsBefore();
+		IsTickBefore();
 		return;
 	}
 
@@ -50,7 +49,8 @@ void AStarLevel::Tick(float deltaTime)
 	// 다음 진행 메뉴 입력 받기
 	if (aStarState == AStarState::IsEnded)
 	{
-		IsEnded();
+		aStarTimer.Tick(deltaTime);
+		IsTickEnded();
 		return;
 	}
 }
@@ -67,10 +67,17 @@ void AStarLevel::Render()
 	PrintDestination();
 	PrintObstacle();
 
+	if (aStarState == AStarState::IsBefore)
+	{
+		IsRenderBefore();
+		return;
+	}
+
 	// 길찾기로 계산된 경로들 출력
 	if (aStarState == AStarState::IsRenderComputepath ||
 		aStarState == AStarState::IsFailed)
 	{
+		IsRenderPlaying();
 		IsRenderComputepath();
 		return;
 	}
@@ -86,6 +93,7 @@ void AStarLevel::Render()
 	if (aStarState == AStarState::IsEnded ||
 		aStarState == AStarState::IsFailed)
 	{
+		IsRenderFinalPath();
 		IsRenderEnded();
 		return;
 	}
@@ -98,10 +106,14 @@ void AStarLevel::SetPlayerPosition()
 	{
 		Vector2 mousePos = Input::Get().GetMousePosition();
 
+		// 위치가 목표 위치와 충돌하면 리턴
+		if (mousePos == destinationPosition) return;
+
 		// 마우스 위치가 유효한 범위인지 확인
 		if (mousePos.x >= 0 && mousePos.x < width - 1 &&
 			mousePos.y >= 0 && mousePos.y < height - 1)
 		{
+			// 위치가 장애물과 충돌하면 리턴
 			for (const auto& i : obstaclePosition)
 			{
 				if (mousePos == i) return;
@@ -119,10 +131,14 @@ void AStarLevel::SetDestinationPosition()
 	{
 		Vector2 mousePos = Input::Get().GetMousePosition();
 
+		// 위치가 플레이어 위치와 충돌하면 리턴
+		if (mousePos == playerPosition) return;
+
 		// 마우스 위치가 유효한 범위인지 확인
 		if (mousePos.x >= 0 && mousePos.x < width - 1 &&
 			mousePos.y >= 0 && mousePos.y < height - 1)
 		{
+			// 위치가 장애물과 충돌하면 리턴
 			for (const auto& i : obstaclePosition)
 			{
 				if (mousePos == i) return;
@@ -140,6 +156,9 @@ bool AStarLevel::SetObstaclePosition()
 	{
 		Vector2 mousePos = Input::Get().GetMousePosition();
 
+		// 해당 위치가 플레이어나 목표 위치인 경우 패스
+		if (mousePos == playerPosition || mousePos == destinationPosition) return false;
+
 		// 마우스 위치가 유효한 범위인지 확인
 		if (mousePos.x >= 0 && mousePos.x < width - 1 &&
 			mousePos.y >= 0 && mousePos.y < height - 1)
@@ -149,9 +168,6 @@ bool AStarLevel::SetObstaclePosition()
 
 			for (const auto& i : obstaclePosition)
 			{
-				// 해당 위치가 플레이어나 목표 위치인 경우 패스
-				if (i == playerPosition || i == destinationPosition) continue;
-
 				// 이미 해당 위치에 장애물이 있으면 루프 종료
 				if (i == mousePos)
 				{
@@ -174,7 +190,7 @@ void AStarLevel::PrintPlayer()
 {
 	if (hasPlayer)
 	{
-		Engine::Get().WriteToBuffer(playerPosition, "P", Color::Green);
+		Engine::Get().WriteToBuffer(playerPosition, "P", Color::LightGreen);
 	}
 }
 
@@ -182,7 +198,7 @@ void AStarLevel::PrintDestination()
 {
 	if (hasTarget)
 	{
-		Engine::Get().WriteToBuffer(destinationPosition, "D", Color::Red);
+		Engine::Get().WriteToBuffer(destinationPosition, "D", Color::LightRed);
 	}
 }
 
@@ -190,11 +206,11 @@ void AStarLevel::PrintObstacle()
 {
 	for (const auto& i : obstaclePosition)
 	{
-		Engine::Get().WriteToBuffer(i, "#", Color::Yellow);
+		Engine::Get().WriteToBuffer(i, "#", Color::LightYellow);
 	}
 }
 
-void AStarLevel::IsBefore()
+void AStarLevel::IsTickBefore()
 {
 	// 장애물을 생성한 프레임에는 플레이어 이동 X
 	if (!SetObstaclePosition())
@@ -210,9 +226,15 @@ void AStarLevel::IsBefore()
 		aStarState = AStarState::IsPlaying;
 		return;
 	}
+
+	// 종료 입력
+	if (Input::Get().GetKey(VK_ESCAPE))
+	{
+		Engine::Get().Quit();
+	}
 }
 
-void AStarLevel::IsEnded()
+void AStarLevel::IsTickEnded()
 {
 	// 재시작 입력
 	if (Input::Get().GetKey(VK_RETURN))
@@ -227,36 +249,94 @@ void AStarLevel::IsEnded()
 	}
 }
 
+void AStarLevel::IsRenderBefore()
+{
+	// 조작키 문구 출력
+	char buffer1[50]{ "[ 플레이어 위치 설정 ]" };
+	char buffer2[50]{ "> \"Left Click\"" };
+
+	char buffer3[50]{ "[ 목표 위치 설정 ]" };
+	char buffer4[50]{ "> \"Right Click\"" };
+
+	char buffer5[50]{ "[ 장애물 위치 설정 ]" };
+	char buffer6[50]{ "> \"Space bar + Left Click\"" };
+
+	char buffer7[50]{ "[ A* 시작 ]" };
+	char buffer8[50]{ "> \"Enter\"" };
+
+	char buffer9[50]{ "[ 종료 ]" };
+	char buffer10[50]{ "> \"ESC\"" };
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 0), buffer1, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 1), buffer2, Color::LightGreen);
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 3), buffer3, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 4), buffer4, Color::LightRed);
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 6), buffer5, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 7), buffer6, Color::LightYellow);
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 6), buffer7, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 5), buffer8, Color::LightSkyBlue);
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 3), buffer9, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 2), buffer10, Color::LightRed);
+}
+
+void AStarLevel::IsRenderPlaying()
+{
+	char buffer1[50]{ "[ >>>>>>>>>>>>>>> ]" };
+	char buffer2[50]{ "   길 찾는 중..." };
+	char buffer3[50]{ "[ >>>>>>>>>>>>>>> ]" };
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 4), buffer1, Color::LightViolet);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 3), buffer2, Color::LightYellow);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 2), buffer3, Color::LightViolet);
+}
+
 void AStarLevel::IsRenderComputepath()
 {
-	static int index = 0;
-
 	if (!aStarTimer.IsTimeout())
 	{
+		for (int i = 0; i < renderComputePathIndex; ++i)
+		{
+			// 길찾기 실패인 경우, 목표 위치와 가장 근접한 노드까지만 출력 후 종료
+			if (aStarState == AStarState::IsFailed)
+			{
+				if (pathPosition[i] == bestNearingNode.pos)
+				{
+					renderComputePathIndex = (int)pathPosition.size();
+					return;
+				}
+			}
+
+			// 목표 위치 발견 시, 종료
+			if (pathPosition[i] == destinationPosition)
+			{
+				renderComputePathIndex = (int)pathPosition.size();
+				return;
+			}
+
+			Engine::Get().WriteToBuffer(pathPosition[i], "@", Color::Intensity);
+		}
 		return;
 	}
 
-	if (index < pathPosition.size())
+	if (renderComputePathIndex < pathPosition.size())
 	{
-		for (int i = 0; i < index; ++i)
-		{
-			Engine::Get().WriteToBuffer(pathPosition[i], "@", Color::Intensity);
-		}
-		++index;
+		++renderComputePathIndex;
 
 		// 타이머 초기화
 		aStarTimer.Reset();
 
 		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
-		aStarTimer.SetTargetTime(0.2f);
+		aStarTimer.SetTargetTime(0.07f);
 	}
+	// A* 계산 경로를 다 출력한 경우
 	else
 	{
-		if (aStarState == AStarState::IsFailed)
-		{
-			aStarState = AStarState::IsFailed;
-		}
-		else
+		// A*가 성공했으면, 최종 경로를 출력하도록 상태 변경
+		if (aStarState != AStarState::IsFailed)
 		{
 			aStarState = AStarState::IsRenderFinalPath;
 		}
@@ -267,26 +347,24 @@ void AStarLevel::IsRenderComputepath()
 
 void AStarLevel::IsRenderFinalPath()
 {
-	static int index = 0;
-
 	if (!aStarTimer.IsTimeout())
 	{
+		for (int i = 0; i < renderFinalPathIndex; ++i)
+		{
+			Engine::Get().WriteToBuffer(finalPath[i], "*", Color::LightGreen);
+		}
 		return;
 	}
 
-	if (index < finalPath.size())
+	if (renderFinalPathIndex < finalPath.size())
 	{
-		for (int i = 0; i < index; ++i)
-		{
-			Engine::Get().WriteToBuffer(finalPath[i], "*", Color::Green);
-		}
-		++index;
+		++renderFinalPathIndex;
 
 		// 타이머 초기화
 		aStarTimer.Reset();
 
 		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
-		aStarTimer.SetTargetTime(0.2f);
+		aStarTimer.SetTargetTime(0.07f);
 	}
 	else
 	{
@@ -300,34 +378,40 @@ void AStarLevel::IsRenderEnded()
 	// 길찾기 종료 문구 출력
 	if (aStarState == AStarState::IsFailed)
 	{
-		char buffer1[25]{ "[ !- 길찾기 실패 -! ]" };
-		Engine::Get().WriteToBuffer(Vector2(height - 2, width + 2), buffer1, Color::Red);
+		char buffer1[50]{ "[ ! *길찾기 실패* ! ]" };
+		Engine::Get().WriteToBuffer(Vector2(width + 1, height - 8), buffer1, Color::LightRed);
 	}
 	else if (aStarState == AStarState::IsEnded)
 	{
-		char buffer1[25]{ "[ !- 길찾기 성공 -! ]" };
-		Engine::Get().WriteToBuffer(Vector2(height - 2, width + 2), buffer1, Color::Green);
+		char buffer1[50]{ "[ ! *길찾기 성공* ! ]" };
+		Engine::Get().WriteToBuffer(Vector2(width + 1, height - 8), buffer1, Color::LightGreen);
 	}
 
 	// 재시작 문구 출력
-	char buffer2[50]{ "[ 재시작 >> \"Enter\" ]" };
-	Engine::Get().WriteToBuffer(Vector2(height - 1, width + 2), buffer2, Color::White);
+	char buffer1[50]{ "[ 재시작 ]" };
+	char buffer2[50]{ "> \"Enter\"" };
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 6), buffer1, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 5), buffer2, Color::LightGreen);
 
 	// 종료 문구 출력
-	char buffer3[50]{ "[ 종료 >> \"ESC\" ]" };
-	Engine::Get().WriteToBuffer(Vector2(height - 0, width + 2), buffer3, Color::White);
+	char buffer3[50]{ "[ 종료 ]" };
+	char buffer4[50]{ "> \"ESC\"" };
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 3), buffer3, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 2), buffer4, Color::LightRed);
 }
 
 void AStarLevel::PrintOutLine()
 {
 	for (int i = 0; i < width; ++i)
 	{
-		Engine::Get().WriteToBuffer({ i, height - 1 }, "-", Color::Blue, 0);
+		Engine::Get().WriteToBuffer({ i, height - 1 }, "-", Color::LightBlue, 0);
 	}
 
 	for (int i = 0; i < height; ++i)
 	{
-		Engine::Get().WriteToBuffer({ width - 1, i }, "|", Color::Blue, 0);
+		Engine::Get().WriteToBuffer({ width - 1, i }, "|", Color::LightBlue, 0);
 	}
 }
 
@@ -362,6 +446,8 @@ void AStarLevel::AStar()
 
 		double h = Heuristic(playerPosition, destinationPosition, orthCost, diagCost);
 		openList.push(Node{ h, 0.0, playerPosition });
+
+		bestNearingNode.gCost = std::numeric_limits<double>::infinity();
 	}
 
 	while (!openList.empty())
@@ -376,21 +462,24 @@ void AStarLevel::AStar()
 		// #3: 목표 위치에 도달했는지 확인
 		if (node.pos == destinationPosition)
 		{
+			// 길찾기 계산 경로 저장 배열 중복 제거
+			pathPosition.erase(std::unique(pathPosition.begin(), pathPosition.end()), pathPosition.end());
+
 			// 부모를 추적해서 최종 경로를 저장
 			Vector2 pos = destinationPosition;
-			pathPosition.emplace_back(pos);
 
 			while (true)
 			{
+				pos = parent[pos];
+
 				// 부모가 자신과 같으면 시작 위치이므로, 루프 종료
 				if (pos == parent[pos]) break;
 
-				pos = parent[pos];
-				pathPosition.emplace_back(pos);
+				finalPath.emplace_back(pos);
 			}
 
 			// 배열을 뒤집어, 끝 -> 시작에서 시작 -> 끝으로 정리
-			std::reverse(pathPosition.begin(), pathPosition.end());
+			std::reverse(finalPath.begin(), finalPath.end());
 
 			// 계산한 좌표를 렌더하도록 상태 변경
 			aStarState = AStarState::IsRenderComputepath;
@@ -411,9 +500,6 @@ void AStarLevel::AStar()
 			// ##2: 이미 방문한 노드인지 확인
 			if (closedList[nextPos.y][nextPos.x]) continue;
 
-			// 길찾기에 계산된 경로에 추가 (시각화 용도)
-			pathPosition.emplace_back(nextPos);
-
 			// ##3: 비용 계산
 			double nextPosGCost = node.gCost + (i < 4 ? orthCost : diagCost);
 
@@ -426,11 +512,21 @@ void AStarLevel::AStar()
 
 			// ##6: OpenList에 노드 추가
 			double fCost = nextPosGCost + Heuristic(nextPos, destinationPosition, orthCost, diagCost);
-			openList.push(Node{ fCost, nextPosGCost, nextPos });
+			openList.push(Node(fCost, nextPosGCost, nextPos));
+
+			// 길찾기에 계산된 경로에 추가 (시각화 용도)
+			pathPosition.emplace_back(nextPos);
+
+			// 목표 위치와 가장 근접한 노드 갱신
+			if (nextPosGCost < bestNearingNode.gCost)
+			{
+				bestNearingNode = node;
+			}
 		}
 	}
 
 	// 여기 왔다는거는 경로를 못찾았다는 의미
+	pathPosition.erase(std::unique(pathPosition.begin(), pathPosition.end()), pathPosition.end());
 	aStarState = AStarState::IsFailed;
 }
 
