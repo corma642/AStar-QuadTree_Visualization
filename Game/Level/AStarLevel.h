@@ -113,7 +113,6 @@ private:
 
 	// 여백 (텍스트 출력용)
 	int tempWidth = 30;
-	int tempHeight = 15;
 
 	// 현재 길찾기 렌더 속도
 	int currnetRenderSpeed;

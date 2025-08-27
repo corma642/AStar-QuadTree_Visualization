@@ -8,7 +8,7 @@ AStarLevel::AStarLevel(const int currnetRenderSpeed)
 	this->currnetRenderSpeed = currnetRenderSpeed;
 
 	width = Engine::Get().Width() - tempWidth;
-	height = Engine::Get().Height() - tempHeight;
+	height = Engine::Get().Height();
 
 	// A-Star 타이머 기본 설정
 	aStarTimer.Reset();
@@ -336,7 +336,7 @@ void AStarLevel::IsRenderComputepath()
 		// 타이머 초기화
 		aStarTimer.Reset();
 
-		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
+		// 현재 길찾기 렌더 속도에 따라 타이머 설정
 		aStarTimer.SetTargetTime(RenderSpeed::GetRenderSpeed(currnetRenderSpeed));
 	}
 	// A* 계산 경로를 다 출력한 경우
@@ -367,7 +367,7 @@ void AStarLevel::IsRenderFinalPath()
 		// 타이머 초기화
 		aStarTimer.Reset();
 
-		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
+		// 현재 길찾기 렌더 속도에 따라 타이머 설정
 		aStarTimer.SetTargetTime(RenderSpeed::GetRenderSpeed(currnetRenderSpeed));
 	}
 	// A* 계산 경로를 다 출력한 경우

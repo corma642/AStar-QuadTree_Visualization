@@ -167,14 +167,20 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Level\QuadTree.cpp" />
+    <ClCompile Include="Utils\Bounds.cpp" />
     <ClCompile Include="Level\AStarLevel.cpp" />
     <ClCompile Include="Game\Game.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Actor\TreeNode.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Level\QuadTree.h" />
+    <ClInclude Include="Utils\Bounds.h" />
     <ClInclude Include="Level\AStarLevel.h" />
     <ClInclude Include="Game\Game.h" />
+    <ClInclude Include="Actor\TreeNode.h" />
     <ClInclude Include="Utils\RenderSpeed.h" />
     <ClInclude Include="Utils\Timer.h" />
   </ItemGroup>
