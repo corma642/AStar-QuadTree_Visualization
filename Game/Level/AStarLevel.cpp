@@ -1,15 +1,18 @@
 #include "AStarLevel.h"
 #include "game/game.h"
 #include "utils/utils.h"
+#include "Utils/RenderSpeed.h"
 
 AStarLevel::AStarLevel(const int currnetRenderSpeed)
 {
+	this->currnetRenderSpeed = currnetRenderSpeed;
+
 	width = Engine::Get().Width() - tempWidth;
 	height = Engine::Get().Height() - tempHeight;
 
 	// A-Star 타이머 기본 설정
 	aStarTimer.Reset();
-	aStarTimer.SetTargetTime(0.2f);
+	aStarTimer.SetTargetTime(RenderSpeed::GetRenderSpeed(currnetRenderSpeed));
 }
 
 void AStarLevel::Tick(float deltaTime)
@@ -31,9 +34,15 @@ void AStarLevel::Tick(float deltaTime)
 		return;
 	}
 
-	// 길찾기 계산 경로 렌더 틱
+	// 경로 렌더 속도 조절 입력
 	if (aStarState == AStarState::IsRenderComputepath ||
-		aStarState == AStarState::IsFailed)
+		aStarState == AStarState::IsRenderFinalPath)
+	{
+		SetRenderSpeed();
+	}
+
+	// 길찾기 계산 경로 렌더 틱
+	if (aStarState == AStarState::IsRenderComputepath)
 	{
 		aStarTimer.Tick(deltaTime);
 		return;
@@ -47,9 +56,9 @@ void AStarLevel::Tick(float deltaTime)
 	}
 
 	// 다음 진행 메뉴 입력 받기
-	if (aStarState == AStarState::IsEnded)
+	if (aStarState == AStarState::IsEnded ||
+		aStarState == AStarState::IsFailed)
 	{
-		aStarTimer.Tick(deltaTime);
 		IsTickEnded();
 		return;
 	}
@@ -73,9 +82,15 @@ void AStarLevel::Render()
 		return;
 	}
 
-	// 길찾기로 계산된 경로들 출력
+	// 경로 렌더 속도 조절
 	if (aStarState == AStarState::IsRenderComputepath ||
-		aStarState == AStarState::IsFailed)
+		aStarState == AStarState::IsRenderFinalPath)
+	{
+		PrintRenderSpeed();
+	}
+
+	// 길찾기로 계산된 경로들 출력
+	if (aStarState == AStarState::IsRenderComputepath)
 	{
 		IsRenderPlaying();
 		IsRenderComputepath();
@@ -220,7 +235,7 @@ void AStarLevel::IsTickBefore()
 	SetDestinationPosition();
 
 	// 길찾기 시작 준비가 된 경우
-	if (Input::Get().GetKeyDown(VK_RETURN))
+	if (hasPlayer && hasTarget && Input::Get().GetKeyDown(VK_RETURN))
 	{
 		// 길찾기 시작중으로 변경
 		aStarState = AStarState::IsPlaying;
@@ -228,7 +243,7 @@ void AStarLevel::IsTickBefore()
 	}
 
 	// 종료 입력
-	if (Input::Get().GetKey(VK_ESCAPE))
+	if (Input::Get().GetKeyDown(VK_ESCAPE))
 	{
 		Engine::Get().Quit();
 	}
@@ -237,13 +252,13 @@ void AStarLevel::IsTickBefore()
 void AStarLevel::IsTickEnded()
 {
 	// 재시작 입력
-	if (Input::Get().GetKey(VK_RETURN))
+	if (Input::Get().GetKeyDown(VK_RETURN))
 	{
 		Game::Get().StartAStar(currnetRenderSpeed);
 	}
 
 	// 종료 입력
-	if (Input::Get().GetKey(VK_ESCAPE))
+	if (Input::Get().GetKeyDown(VK_ESCAPE))
 	{
 		Engine::Get().Quit();
 	}
@@ -296,29 +311,21 @@ void AStarLevel::IsRenderPlaying()
 
 void AStarLevel::IsRenderComputepath()
 {
+	// 경로 렌더
+	for (int i = 0; i < renderComputePathIndex; ++i)
+	{
+		// 목표 위치 발견 시, 종료
+		if (pathPosition[i] == destinationPosition)
+		{
+			renderComputePathIndex = (int)pathPosition.size();
+			break;
+		}
+
+		Engine::Get().WriteToBuffer(pathPosition[i], "@", Color::Intensity);
+	}
+
 	if (!aStarTimer.IsTimeout())
 	{
-		for (int i = 0; i < renderComputePathIndex; ++i)
-		{
-			// 길찾기 실패인 경우, 목표 위치와 가장 근접한 노드까지만 출력 후 종료
-			if (aStarState == AStarState::IsFailed)
-			{
-				if (pathPosition[i] == bestNearingNode.pos)
-				{
-					renderComputePathIndex = (int)pathPosition.size();
-					return;
-				}
-			}
-
-			// 목표 위치 발견 시, 종료
-			if (pathPosition[i] == destinationPosition)
-			{
-				renderComputePathIndex = (int)pathPosition.size();
-				return;
-			}
-
-			Engine::Get().WriteToBuffer(pathPosition[i], "@", Color::Intensity);
-		}
 		return;
 	}
 
@@ -330,29 +337,26 @@ void AStarLevel::IsRenderComputepath()
 		aStarTimer.Reset();
 
 		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
-		aStarTimer.SetTargetTime(0.07f);
+		aStarTimer.SetTargetTime(RenderSpeed::GetRenderSpeed(currnetRenderSpeed));
 	}
 	// A* 계산 경로를 다 출력한 경우
 	else
 	{
-		// A*가 성공했으면, 최종 경로를 출력하도록 상태 변경
-		if (aStarState != AStarState::IsFailed)
-		{
-			aStarState = AStarState::IsRenderFinalPath;
-		}
-
+		aStarState = AStarState::IsRenderFinalPath;
 		aStarTimer.Reset();
 	}
 }
 
 void AStarLevel::IsRenderFinalPath()
 {
+	// 경로 렌더
+	for (int i = 0; i < renderFinalPathIndex; ++i)
+	{
+		Engine::Get().WriteToBuffer(finalPath[i], "*", Color::LightGreen);
+	}
+
 	if (!aStarTimer.IsTimeout())
 	{
-		for (int i = 0; i < renderFinalPathIndex; ++i)
-		{
-			Engine::Get().WriteToBuffer(finalPath[i], "*", Color::LightGreen);
-		}
 		return;
 	}
 
@@ -364,12 +368,16 @@ void AStarLevel::IsRenderFinalPath()
 		aStarTimer.Reset();
 
 		// Todo:## 현재 길찾기 렌더 속도에 따라 타이머 설정해야 됨
-		aStarTimer.SetTargetTime(0.07f);
+		aStarTimer.SetTargetTime(RenderSpeed::GetRenderSpeed(currnetRenderSpeed));
 	}
+	// A* 계산 경로를 다 출력한 경우
 	else
 	{
+		if (aStarState == AStarState::IsFailed) return;
+
 		aStarState = AStarState::IsEnded;
 		aStarTimer.Reset();
+		renderComputePathIndex = 0;
 	}
 }
 
@@ -392,7 +400,7 @@ void AStarLevel::IsRenderEnded()
 	char buffer2[50]{ "> \"Enter\"" };
 
 	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 6), buffer1, Color::LightWhite);
-	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 5), buffer2, Color::LightGreen);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 5), buffer2, Color::LightSkyBlue);
 
 	// 종료 문구 출력
 	char buffer3[50]{ "[ 종료 ]" };
@@ -400,6 +408,34 @@ void AStarLevel::IsRenderEnded()
 
 	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 3), buffer3, Color::LightWhite);
 	Engine::Get().WriteToBuffer(Vector2(width + 1, height - 2), buffer4, Color::LightRed);
+}
+
+void AStarLevel::SetRenderSpeed()
+{
+	// 경로 렌더 속도 낮추기
+	if (Input::Get().GetKeyDown(VK_LEFT))
+	{
+		currnetRenderSpeed = (currnetRenderSpeed - 1 + 11) % 11;
+	}
+
+	// 경로 렌더 속도 높이기
+	if (Input::Get().GetKeyDown(VK_RIGHT))
+	{
+		currnetRenderSpeed = (currnetRenderSpeed + 1) % 11;
+	}
+}
+
+void AStarLevel::PrintRenderSpeed()
+{
+	char buffer1[50]{ "[ 렌더 속도 조절 ] " };
+	char buffer2[50]{ "> \"Left Key\" | \"Right Key\"" };
+
+	char buffer3[50]{};
+	sprintf_s(buffer3, 50, "> 현재 렌더 속도: %d", currnetRenderSpeed);
+
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 0), buffer1, Color::LightWhite);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 1), buffer2, Color::LightSkyBlue);
+	Engine::Get().WriteToBuffer(Vector2(width + 1, 3), buffer3, Color::LightYellow);
 }
 
 void AStarLevel::PrintOutLine()
@@ -446,8 +482,6 @@ void AStarLevel::AStar()
 
 		double h = Heuristic(playerPosition, destinationPosition, orthCost, diagCost);
 		openList.push(Node{ h, 0.0, playerPosition });
-
-		bestNearingNode.gCost = std::numeric_limits<double>::infinity();
 	}
 
 	while (!openList.empty())
@@ -516,12 +550,6 @@ void AStarLevel::AStar()
 
 			// 길찾기에 계산된 경로에 추가 (시각화 용도)
 			pathPosition.emplace_back(nextPos);
-
-			// 목표 위치와 가장 근접한 노드 갱신
-			if (nextPosGCost < bestNearingNode.gCost)
-			{
-				bestNearingNode = node;
-			}
 		}
 	}
 

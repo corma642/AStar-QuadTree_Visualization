@@ -7,7 +7,7 @@ Game::Game()
 {
 	instance = this;
 
-	AddLevel(new AStarLevel());
+	AddLevel(new AStarLevel(5));
 }
 
 Game::~Game()

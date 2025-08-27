@@ -175,6 +175,7 @@
   <ItemGroup>
     <ClInclude Include="Level\AStarLevel.h" />
     <ClInclude Include="Game\Game.h" />
+    <ClInclude Include="Utils\RenderSpeed.h" />
     <ClInclude Include="Utils\Timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

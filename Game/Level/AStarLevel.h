@@ -55,7 +55,7 @@ enum class AStarState
 {
 	IsBefore,		// 시작 준비 전
 	IsPlaying,		// 진행중
-	IsRenderComputepath,	// 계산한 좌표 렌더중
+	IsRenderComputepath,	// 계산한 경로 렌더중
 	IsRenderFinalPath,		// 최종 경로 렌더중
 	IsEnded,		// 끝남. 다음 입력 대기중
 	IsFailed,		// 경로를 못찾음
@@ -96,6 +96,10 @@ private:
 	void IsRenderFinalPath();
 	void IsRenderEnded();
 
+	// 경로 렌더 속도 조절 함수
+	void SetRenderSpeed();
+	void PrintRenderSpeed();
+
 	// A-Star 길찾기 함수
 	void AStar();
 
@@ -112,7 +116,7 @@ private:
 	int tempHeight = 15;
 
 	// 현재 길찾기 렌더 속도
-	int currnetRenderSpeed = 3;
+	int currnetRenderSpeed;
 
 	// 플레이어와 목표의 위치가 설정되었는지 여부
 	bool hasPlayer = false;
@@ -145,9 +149,6 @@ private:
 
 	// 길찾기 계산 경로 저장 배열
 	std::vector<Vector2> pathPosition;
-
-	// 목표 위치와 가장 근접한 노드
-	Node bestNearingNode;
 
 	// 최종 경로 저장 배열
 	std::vector<Vector2> finalPath;
