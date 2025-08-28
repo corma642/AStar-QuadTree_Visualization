@@ -5,37 +5,82 @@
 
 QuadTree::QuadTree()
 {
-	// width = 150
-	// height = 47
-
 	width = Engine::Get().Width() - tempWidth;
 	height = Engine::Get().Height();
 
-	root = new TreeNode(Bounds(0, 0, (float)width, (float)height), 0);
+	// 시작 depth는 0, owner에 QuadTreeLevel 전달
+	root = new TreeNode(Bounds(0, 0, (float)width, (float)height), 0, Color::LightWhite, this);
+
+	// 애니메이션 초기화
+	subdivTimer.SetTargetTime(subdivInterval);
+	animating = true;
 }
 
 QuadTree::~QuadTree()
 {
+	// 애니메이션 데이터 초기화
+	animating = false;
+	subdivQueue.clear();
+
+	// 루트 노드부터 재귀적으로 쿼드 트리 제거
 	SafeDelete(root);
+}
+
+void QuadTree::SubdivisionCall(TreeNode* node)
+{
+	if (!node) return;
+
+	// 이미 분할 요청된 노드의 경우, 중복 요청 방지
+	if (node->IsSubdivideRequested()) return;
+
+	// 분할 애니메이션 수행 목록에 추가 및 호출 요청 처리
+	subdivQueue.push_back(node);
+	node->SetSubdivideRequested(true);
 }
 
 void QuadTree::Tick(float deltaTime)
 {
 	super::Tick(deltaTime);
 
-	// 조작 입력 받기 (쿼드 트리 노드 추가도 같이 구현)
+	// 입력 처리 (오브젝트 생성 및 데이터 삽입)
 	IsTickInput();
+
+	// 애니메이션 처리
+	if (animating && !subdivQueue.empty())
+	{
+		subdivTimer.Tick(deltaTime);
+
+		if (subdivTimer.IsTimeout())
+		{
+			// 큐에서 하나씩 꺼내 애니메이션/분할 처리
+			TreeNode* node = subdivQueue.front();
+			subdivQueue.pop_front();
+
+			// 분할 처리될 노드의 분할 요청 완료 처리
+			node->SetSubdivideRequested(false);
+
+			// 분할 애니메이션 시작 호출
+			// 실제 분할은 node 내부에서 애니메이션이 끝날 때 수행됨
+			node->BeginSubdivisionAnimation(subdivInterval);
+
+			// 애니메이션 타이머 초기화
+			subdivTimer.Reset();
+		}
+	}
+
+	// 모든 노드의 애니메이션 타이머 업데이트
+	root->Tick(deltaTime);
 }
 
 void QuadTree::Render()
 {
 	super::Render();
 
-	// 조작키 / 메뉴 등등 UI 렌더
+	// UI 렌더
 	IsRenderUI();
 
 	// 쿼드 트리 렌더
-	root->Render();
+	if (root) root->Render();
 
 	// 소환된 오브젝트 렌더
 	for (const SpawnObject& obj : spawnObjects)
@@ -43,11 +88,6 @@ void QuadTree::Render()
 		Engine::Get().WriteToBuffer(obj.pos, obj.character, Color::LightWhite);
 	}
 }
-
-//std::vector<TreeNode*> QuadTree::Query(TreeNode* queryNode)
-//{
-//	return std::vector<TreeNode*>();
-//}
 
 void QuadTree::IsTickInput()
 {
@@ -75,11 +115,11 @@ void QuadTree::IsTickInput()
 			// 새로운 객체 생성 및 배열에 추가
 			spawnObjects.emplace_back(SpawnObject(spawnPos));
 
-			// 단일 문자를 받고 있으니, Bounds 범위를 1x1로 잡음
+			// Bounds 범위를 1x1로 잡음
 			Bounds objBounds((float)spawnPos.x, (float)spawnPos.y, 1.0f, 1.0f);
 
-			// 객체를 TreeNode로 래핑에서, 루트 노드에 삽입
-			TreeNode* objNode = new TreeNode(objBounds);
+			// 객체를 TreeNode로 래핑해서, 루트 노드에 삽입 (QuadTreeLevel 전달)
+			TreeNode* objNode = new TreeNode(objBounds, 0, Color::LightWhite, this);
 			root->Insert(objNode);
 		}
 	}
@@ -87,7 +127,6 @@ void QuadTree::IsTickInput()
 
 void QuadTree::IsRenderUI()
 {
-	// 조작키 문구 출력
 	char buffer1[50]{ "[ 오브젝트 설치 ]" };
 	char buffer2[50]{ "> \"Left Click\"" };
 

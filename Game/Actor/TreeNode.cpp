@@ -1,11 +1,12 @@
-#include "TreeNode.h"
+ï»¿#include "TreeNode.h"
 #include "Game/Game.h"
 #include "Utils/Utils.h"
+#include "Level/QuadTree.h"
 
-TreeNode::TreeNode(const Bounds& inBounds, int inDepth, Color parentNodeColor)
-	: bounds(inBounds), depth(inDepth)
+TreeNode::TreeNode(const Bounds& inBounds, int inDepth, Color parentNodeColor, QuadTree* inOwner)
+	: bounds(inBounds), depth(inDepth), owner(inOwner)
 {
-	//color = parentNodeColor;
+	// ìƒ‰ìƒ: ë¶€ëª¨ ìƒ‰ê³¼ ë‹¤ë¥´ê²Œ ëœë¤ ì„¤ì •
 	while (true)
 	{
 		color = (static_cast<Color>(Utils::Random(9, 14)));
@@ -15,58 +16,125 @@ TreeNode::TreeNode(const Bounds& inBounds, int inDepth, Color parentNodeColor)
 
 TreeNode::~TreeNode()
 {
-	// Á¤¸® ÇÔ¼ö È£Ãâ
+	// ì •ë¦¬ í•¨ìˆ˜ í˜¸ì¶œ
 	Clear();
+}
+
+void TreeNode::Tick(float deltaTime)
+{
+	// ì• ë‹ˆë©”ì´ì…˜ íƒ€ì´ë¨¸ ê°±ì‹ 
+	if (animState == AnimState::AnimatingSubdivision)
+	{
+		animTimer += deltaTime;
+
+		// ì• ë‹ˆë©”ì´ì…˜ ê²½ê³¼ ì‹œê°„ì´ ì§€ì† ì‹œê°„ì„ ë„˜ì€ ê²½ìš°
+		if (animTimer >= animDuration)
+		{
+			// ì• ë‹ˆë©”ì´ì…˜ ì¢…ë£Œ ë° ê¸°ë³¸ ìƒíƒœë¡œ ë³€ê²½
+			animTimer = animDuration;
+			animState = AnimState::Idle;
+
+			// ì• ë‹ˆë©”ì´ì…˜ ëë‚œ ì‹œì ì— ì‹¤ì œ ë¶„í•  ì‹¤í–‰
+			SubdivideNow();
+		}
+	}
+
+	// ìì‹ ë…¸ë“œë“¤ë„ Tick ìˆ˜í–‰
+	if (IsDivided())
+	{
+		if (topLeft) topLeft->Tick(deltaTime);
+		if (topRight) topRight->Tick(deltaTime);
+		if (bottomLeft) bottomLeft->Tick(deltaTime);
+		if (bottomRight) bottomRight->Tick(deltaTime);
+	}
 }
 
 void TreeNode::Render()
 {
-	// Á¤¼ö ÁÂÇ¥·Î º¯È¯
+	// ì •ìˆ˜ ì¢Œí‘œë¡œ ë³€í™˜
 	int cX = static_cast<int>(bounds.GetX());
 	int cY = static_cast<int>(bounds.GetY());
 	int mX = static_cast<int>(bounds.MaxX());
 	int mY = static_cast<int>(bounds.MaxY());
 
-	// ¿µ¿ª Å©±â°¡ 0 ÀÌÇÏÀÌ¸é ¾Æ¹«°Íµµ ±×¸®Áö ¾ÊÀ½
+	// ì˜ì—­ í¬ê¸°ê°€ 0 ì´í•˜ì´ë©´ ì•„ë¬´ê²ƒë„ ê·¸ë¦¬ì§€ ì•ŠìŒ
 	if (mX <= cX || mY <= cY) return;
 
-	// Áß¾Ó¼± ÁÂÇ¥ (Àı´ë ÁÂÇ¥)
+	// ì¤‘ì•™ì„  ì¢Œí‘œ (ì ˆëŒ€ ì¢Œí‘œ)
 	int midX = cX + (mX - cX) / 2;
 	int midY = cY + (mY - cY) / 2;
 
-	// ³ëµå Ãâ·Â
-	for (int y = cY; y < mY; y++)
+	// ì• ë‹ˆë©”ì´ì…˜ ì§„í–‰ë„
+	float progress = 0.0f;
+	if (animState == AnimState::AnimatingSubdivision && animDuration > 0.0f)
 	{
-		for (int x = cX; x < mX; x++)
+		progress = min(1.0f, animTimer / animDuration);
+	}
+
+	// ì‹­ìì„  ê¸¸ì´
+	int halfW = (mX - cX) / 2;
+	int halfH = (mY - cY) / 2;
+	int lenX = static_cast<int>(halfW * progress);
+	int lenY = static_cast<int>(halfH * progress);
+
+	for (int y = cY; y < mY; ++y)
+	{
+		for (int x = cX; x < mX; ++x)
 		{
-			// ºĞÇÒµÈ °æ¿ì¿¡´Â Áß¾Ó ½ÊÀÚ¼±±îÁö Ãâ·Â
-			if (IsDivided())
+			// ì™¸ê³½ì„  í•­ìƒ ì¶œë ¥
+			if (y == cY || y == mY - 1)
 			{
-				// ºĞÇÒµÈ °æ¿ì: ¿Ü°û¼± + Áß¾Ó ½ÊÀÚ¼±
-				if (y == cY || y == mY - 1 || y == midY)
+				Engine::Get().WriteToBuffer({ x, y }, "-", color);
+				continue;
+			}
+			if (x == cX || x == mX - 1)
+			{
+				Engine::Get().WriteToBuffer({ x, y }, "|", color);
+				continue;
+			}
+
+			// ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰ì¤‘ì¸ ê²½ìš°: ì¤‘ì•™ ì‹­ìì„ ì„ ì• ë‹ˆë©”ì´ì…˜ ì§„í–‰ë„ë§Œí¼ ì¶œë ¥
+			if (animState == AnimState::AnimatingSubdivision)
+			{
+				if (y == midY)
 				{
-					Engine::Get().WriteToBuffer({ x, y }, "-", color);
+					if (x >= midX - lenX && x < midX + lenX)
+					{
+						Engine::Get().WriteToBuffer({ x, y }, "-", color);
+						continue;
+					}
 				}
-				else if (x == cX || x == mX - 1 || x == midX)
+				if (x == midX)
 				{
-					Engine::Get().WriteToBuffer({ x, y }, "|", color);
+					if (y >= midY - lenY && y < midY + lenY)
+					{
+						Engine::Get().WriteToBuffer({ x, y }, "|", color);
+						continue;
+					}
 				}
 			}
+			// ì• ë‹ˆë©”ì´ì…˜ ì‹¤í–‰ì¤‘ì´ ì•„ë‹Œ ê²½ìš°
 			else
 			{
-				if (y == cY || y == mY - 1)
+				// ë¶„í• ëœ ìƒíƒœë¼ë©´ ì¤‘ì•™ì„ ì„ ì¶”ê°€ë¡œ ì¶œë ¥í•¨ (ì™¸ê³½ì„  í•­ìƒ ì¶œë ¥)
+				if (IsDivided())
 				{
-					Engine::Get().WriteToBuffer({ x, y }, "-", color);
-				}
-				else if (x == cX || x == mX - 1)
-				{
-					Engine::Get().WriteToBuffer({ x, y }, "|", color);
+					if (y == midY)
+					{
+						Engine::Get().WriteToBuffer({ x, y }, "-", color);
+						continue;
+					}
+					if (x == midX)
+					{
+						Engine::Get().WriteToBuffer({ x, y }, "|", color);
+						continue;
+					}
 				}
 			}
 		}
 	}
 
-	// ºĞÇÒµÈ °æ¿ì ÀÚ¼Õ ³ëµåµéµµ Ãâ·Â
+	// ìì‹ ë…¸ë“œë“¤ë„ ì¶œë ¥
 	if (IsDivided())
 	{
 		topLeft->Render();
@@ -78,44 +146,72 @@ void TreeNode::Render()
 
 void TreeNode::Insert(TreeNode* node)
 {
-	// #1: »ğÀÔ ´ë»óÀÌ ³» ¿µ¿ª ¾È¿¡ µé¾î¿Í ÀÖ´ÂÁö È®ÀÎ
+	// #1: ì‚½ì… ëŒ€ìƒì´ ë‚´ ì˜ì—­ ì•ˆì— ë“¤ì–´ì™€ ìˆëŠ”ì§€ í™•ì¸
 	if (!bounds.Intersects(node->GetBounds())) return;
 
-	// #2: ºĞÇÒµÇÁö ¾ÊÀ½. ¿ë·®ÀÌ ÃæºĞÇÔ. ÇöÀç ³ëµå¿¡ ÀúÀå
+	// #2: ë¶„í• ë˜ì§€ ì•ŠìŒ. ìš©ëŸ‰ì´ ì¶©ë¶„í•¨. í˜„ì¬ ë…¸ë“œì— ì €ì¥
 	if (!IsDivided() && points.size() < capacity)
 	{
 		points.emplace_back(node);
 		return;
 	}
 
-	// #3: ºĞÇÒµÇÁö ¾ÊÀ½. ¿ë·®ÀÌ ¸ğµÎ Âü. ºĞÇÒ ÁøÇà
+	// #3: ë¶„í• ë˜ì§€ ì•ŠìŒ. ìš©ëŸ‰ì´ ëª¨ë‘ ì°¸. ë¶„í•  ì§„í–‰
 	if (!IsDivided())
 	{
-		// ºĞÇÒ¿¡ ½ÇÆĞÇÏ´Â °æ¿ì (ÃÖ´ë ±íÀÌÀÎ °æ¿ì)
-		if (!Subdivide())
+		// #4: í˜„ì¬ ì• ë‹ˆë©”ì´ì…˜ ëª¨ë“œì¸ ê²½ìš°
+		if (owner && owner->IsAnimating())
 		{
-			// ÇöÀç ³ëµå¿¡ ÀúÀå
+			// ë¶„í• ì„ ì§€ì—°í•˜ê³  í˜„ì¬ ë…¸ë“œì— ì„ì‹œ ë³´ê´€
+			points.emplace_back(node);
+
+			// ë¶„í•  ìš”ì²­
+			owner->SubdivisionCall(this);
+			return;
+		}
+
+		// #5: í˜„ì¬ ì• ë‹ˆë©”ì´ì…˜ ëª¨ë“œê°€ ì•„ë‹Œ ê²½ìš°
+		// ë™ê¸°ì ìœ¼ë¡œ ë¶„í•  ì‹œë„
+		if (!SubdivideNow())
+		{
+			// ë¶„í•  ë¶ˆê°€(ìµœëŒ€ ê¹Šì´ ë“±) í•  ê²½ìš° í˜„ì¬ ë…¸ë“œì— ì„ì‹œ ë³´ê´€
 			points.emplace_back(node);
 			return;
 		}
 	}
 
-	// #4: ºĞÇÒ µÊ. ÀÚ½Ä¿¡°Ô »ğÀÔ ½Ãµµ
-	// ÀÚ½ÄÀÇ Bounds¿Í »ğÀÔÇÏ·Á´Â °´Ã¼ÀÇ Bounds°¡ ±³Â÷ÇÏ¸é, »ğÀÔ
-	if (topLeft->GetBounds().Intersects(node->GetBounds())) topLeft->Insert(node);
-	if (topRight->GetBounds().Intersects(node->GetBounds())) topRight->Insert(node);
-	if (bottomLeft->GetBounds().Intersects(node->GetBounds())) bottomLeft->Insert(node);
-	if (bottomRight->GetBounds().Intersects(node->GetBounds())) bottomRight->Insert(node);
+	// #6: ë¶„í• ë˜ì–´ ìˆë‹¤ë©´ ì ì ˆí•œ ìì‹ì—ê²Œ ì‚½ì… (ì¤‘ë³µ ì‚½ì… ë°©ì§€)
+	if (topLeft && topLeft->GetBounds().Intersects(node->GetBounds()))
+	{
+		topLeft->Insert(node);
+	}
+	else if (topRight && topRight->GetBounds().Intersects(node->GetBounds()))
+	{
+		topRight->Insert(node);
+	}
+	else if (bottomLeft && bottomLeft->GetBounds().Intersects(node->GetBounds()))
+	{
+		bottomLeft->Insert(node);
+	}
+	else if (bottomRight && bottomRight->GetBounds().Intersects(node->GetBounds()))
+	{
+		bottomRight->Insert(node);
+	}
+	else
+	{
+		// ê²½ê³„ íŒì • ë¬¸ì œë¡œ ì–´ëŠ ìì‹ì—ë„ ë“¤ì–´ê°€ì§€ ì•ŠëŠ”ë‹¤ë©´ ì•ˆì „í•˜ê²Œ í˜„ì¬ ë…¸ë“œì— ì„ì‹œ ë³´ê´€
+		points.emplace_back(node);
+	}
 }
 
 void TreeNode::Query(
 	const Bounds& queryBounds,
 	std::vector<TreeNode*>& possibleNodes)
 {
-	// #1: ³» ¿µ¿ªÀÌ ÁúÀÇ ¿µ¿ª°ú °ãÄ¡Áö ¾ÊÀ¸¸é ¹«½Ã
+	// #1: ë‚´ ì˜ì—­ì´ ì§ˆì˜ ì˜ì—­ê³¼ ê²¹ì¹˜ì§€ ì•Šìœ¼ë©´ ë¬´ì‹œ
 	if (!bounds.Intersects(queryBounds)) return;
 
-	// #2: ÇöÀç ³ëµå¿¡ ÀÖ´Â °´Ã¼µéÀ» ÈÄº¸¿¡ Ãß°¡
+	// #2: í˜„ì¬ ë…¸ë“œì— ìˆëŠ” ê°ì²´ë“¤ì„ í›„ë³´ì— ì¶”ê°€
 	for (TreeNode* point : points)
 	{
 		if (queryBounds.Intersects(point->GetBounds()))
@@ -124,7 +220,7 @@ void TreeNode::Query(
 		}
 	}
 
-	// #3: ºĞÇÒµÇ¾î ÀÖÀ¸¸é ÀÚ½Ä¿¡°Ôµµ ÁúÀÇ
+	// #3: ë¶„í• ë˜ì–´ ìˆìœ¼ë©´ ìì‹ì—ê²Œë„ ì§ˆì˜
 	if (IsDivided())
 	{
 		topLeft->Query(queryBounds, possibleNodes);
@@ -136,33 +232,80 @@ void TreeNode::Query(
 
 bool TreeNode::Subdivide()
 {
-	// ÃÖ´ë ±íÀÌÀÎ °æ¿ì, ½ÇÆĞ
+	// ë¶„í•  ìš”ì²­ ì‹œ, ì• ë‹ˆë©”ì´ì…˜ ì¬ìƒ
+	float subdivideAnimationDuration = owner->GetSubdivInterval();
+	BeginSubdivisionAnimation(subdivideAnimationDuration);
+	return true;
+}
+
+bool TreeNode::SubdivideNow()
+{
+	// ì´ë¯¸ ë¶„í• ë˜ì–´ ìˆìœ¼ë©´ ë¶„í•  ì„±ê³µ
+	if (IsDivided()) return true;
+
+	// ìµœëŒ€ ê¹Šì´ì¸ ê²½ìš° ì‹¤íŒ¨
 	if (depth == Engine::Get().Depth()) return false;
 
-	float x = bounds.GetX() + 1;
-	float y = bounds.GetY() + 1;
-	float halfW = bounds.GetWidth() / 2.0f - 1;
-	float halfH = bounds.GetHeight() / 2.0f - 1;
+	// ì •ìˆ˜ ì¢Œí‘œí™”(ë Œë”ì™€ ë™ì¼ ê·œì¹™)
+	int x0 = static_cast<int>(bounds.GetX());
+	int y0 = static_cast<int>(bounds.GetY());
+	int x1 = static_cast<int>(bounds.MaxX()); // exclusive
+	int y1 = static_cast<int>(bounds.MaxY()); // exclusive
 
-	// ÇöÀç ³ëµåÀÇ Bounds¸¦ 4µîºĞÇØ¼­ °¢ ÀÚ½Ä ³ëµå¸¦ »ı¼º
-	topLeft = new TreeNode(Bounds(x, y, halfW, halfH), depth + 1);
-	topRight = new TreeNode(Bounds(x + halfW, y, halfW, halfH), depth + 1);
-	bottomLeft = new TreeNode(Bounds(x, y + halfH, halfW, halfH), depth + 1);
-	bottomRight = new TreeNode(Bounds(x + halfW, y + halfH, halfW, halfH), depth + 1);
+	int w = x1 - x0;
+	int h = y1 - y0;
+	if (w <= 1 || h <= 1) return false;
+
+	int midX = x0 + w / 2;
+	int midY = y0 + h / 2;
+
+	// ìì‹ ìƒì„± (owner ì „ë‹¬)
+	topLeft = new TreeNode(Bounds((float)x0, (float)y0, (float)(midX - x0), (float)(midY - y0)), depth + 1, color, owner);
+	topRight = new TreeNode(Bounds((float)midX, (float)y0, (float)(x1 - midX), (float)(midY - y0)), depth + 1, color, owner);
+	bottomLeft = new TreeNode(Bounds((float)x0, (float)midY, (float)(midX - x0), (float)(y1 - midY)), depth + 1, color, owner);
+	bottomRight = new TreeNode(Bounds((float)midX, (float)midY, (float)(x1 - midX), (float)(y1 - midY)), depth + 1, color, owner);
+
+
+	// ê¸°ì¡´ pointsë¥¼ ìì‹ì—ê²Œ ì¬ë¶„ë°° (ì†Œìœ ê¶Œì´ ìì‹ì—ê²Œ ì´ë™)
+	if (!points.empty())
+	{
+		for (TreeNode* p : points)
+		{
+			if (!p) continue;
+
+			if (topLeft->GetBounds().Intersects(p->GetBounds()))      topLeft->Insert(p);
+			else if (topRight->GetBounds().Intersects(p->GetBounds())) topRight->Insert(p);
+			else if (bottomLeft->GetBounds().Intersects(p->GetBounds())) bottomLeft->Insert(p);
+			else if (bottomRight->GetBounds().Intersects(p->GetBounds())) bottomRight->Insert(p);
+			else topLeft->Insert(p); // ì•ˆì „ ëŒ€ì²˜
+		}
+		// ë¶€ëª¨ëŠ” ë” ì´ìƒ ì´ í¬ì¸í„°ë“¤ì„ ì†Œìœ í•˜ì§€ ì•ŠìŒ. ì‚­ì œí•˜ì§€ ì•Šê³  ë²¡í„°ë§Œ ë¹„ì›€
+		points.clear();
+	}
 
 	return true;
 }
 
 bool TreeNode::IsDivided()
 {
-	// ÀÚ½ÄÀÌ ÇÏ³ª¶óµµ ÀÖ´Ù¸é, ºĞÇÒ µÇ¾ú´Ù´Â ÀÇ¹Ì
+	// ìì‹ì´ í•˜ë‚˜ë¼ë„ ìˆë‹¤ë©´, ë¶„í•  ë˜ì—ˆë‹¤ëŠ” ì˜ë¯¸
 	return topLeft != nullptr;
 }
 
-// ÀÚ½Å Æ÷ÇÔ, ºĞÇÒµÈ ÀÚ¼ÕÀÌ ÀÖ´Ù¸é ÀÚ¼Õ±îÁö Á¤¸®
+void TreeNode::BeginSubdivisionAnimation(float duration)
+{
+	// ì´ë¯¸ ë¶„í•  ì• ë‹ˆë©”ì´ì…˜ì´ ì§„í–‰ì¤‘ì´ë©´ ë°˜í™˜
+	if (animState == AnimState::AnimatingSubdivision) return;
+
+	// ì• ë‹ˆë©”ì´ì…˜ ì§€ì† ì‹œê°„ ì´ˆê¸°í™” ë° ì• ë‹ˆë©”ì´ì…˜ ìƒíƒœ ì„¤ì •
+	animDuration = duration;
+	animTimer = 0.0f;
+	animState = AnimState::AnimatingSubdivision;
+}
+
 void TreeNode::Clear()
 {
-	// ÇöÀç ³ëµå Á¤¸®
+	// í˜„ì¬ ë…¸ë“œì— í¬í•¨ëœ ë…¸ë“œ ì œê±°
 	if (!points.empty())
 	{
 		for (TreeNode*& point : points)
@@ -172,10 +315,10 @@ void TreeNode::Clear()
 				SafeDelete(point);
 			}
 		}
+		points.clear();
 	}
-	points.clear();
 
-	// ºĞÇÒµÈ °æ¿ì, ÀÚ¼Õ ³ëµåµéµµ Á¤¸®
+	// ìì‹ ë…¸ë“œë“¤ì´ ìˆìœ¼ë©´ ì¬ê·€ ì •ë¦¬ ë° ì‚­ì œ
 	if (topLeft) { topLeft->Clear(); SafeDelete(topLeft); }
 	if (topRight) { topRight->Clear(); SafeDelete(topRight); }
 	if (bottomLeft) { bottomLeft->Clear(); SafeDelete(bottomLeft); }

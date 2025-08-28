@@ -5,13 +5,11 @@
 #include "Math/Vector2.h"
 #include "Actor/TreeNode.h"
 
-// 쿼드 트리에 소환할 오브젝트
+#include <deque>
+
 struct SpawnObject
 {
-	SpawnObject(const Vector2 inPos) : character("O"), pos(inPos)
-	{
-	}
-
+	SpawnObject(const Vector2 inPos) : character("O"), pos(inPos) {}
 	const char* character;
 	Vector2 pos;
 };
@@ -27,8 +25,14 @@ public:
 	virtual void Tick(float deltaTime) override;
 	virtual void Render() override;
 
-	//// 전달한 객체와 겹치는 노드를 반환하는 함수 (질의-Query)
-	//std::vector<TreeNode*> Query(TreeNode* queryNode);
+	// TreeNode가 분할을 요청받는 함수
+	void SubdivisionCall(TreeNode* node);
+	
+	// 애니메이션 실행중인지 확인하는 함수
+	bool IsAnimating() const { return animating; }
+
+	// 분할 애니메이션 재생 시간 getter
+	float GetSubdivInterval() const { return subdivInterval; }
 
 private:
 	// 콘솔 창 크기
@@ -49,4 +53,16 @@ private:
 
 	// 루트 노드
 	TreeNode* root = nullptr;
+
+	// 분할 애니메이션 타이머
+	Timer subdivTimer;
+
+	// 분할 애니메이션 재생 시간
+	float subdivInterval = 0.2f;
+
+	// 분할 애니메이션을 수행할 노드 목록
+	std::deque<TreeNode*> subdivQueue;
+
+	// 현재 애니메이션 진행중인지 여부
+	bool animating = true;
 };
