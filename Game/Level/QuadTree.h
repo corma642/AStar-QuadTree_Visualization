@@ -27,11 +27,8 @@ public:
 	virtual void Tick(float deltaTime) override;
 	virtual void Render() override;
 
-	// 전달한 객체와 겹치는 노드를 반환하는 함수 (질의-Query)
-	std::vector<TreeNode*> Query(TreeNode* queryNode);
-
-	// 나눌 수 있는 트리의 최대 깊이 값
-	static const int maxDepth = 3;
+	//// 전달한 객체와 겹치는 노드를 반환하는 함수 (질의-Query)
+	//std::vector<TreeNode*> Query(TreeNode* queryNode);
 
 private:
 	// 콘솔 창 크기

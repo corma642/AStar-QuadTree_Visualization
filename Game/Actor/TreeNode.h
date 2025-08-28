@@ -2,13 +2,14 @@
 
 #include "Utils/Bounds.h"
 #include "Math/Color.h"
+#include "Utils/Timer.h"
 
 #include <vector>
 
 class TreeNode
 {
 public:
-	TreeNode(const Bounds& inBounds, int inDepth = 0, Color nodeColor = Color::LightWhite);
+	TreeNode(const Bounds& inBounds, int inDepth = 0, Color parentNodeColor = Color::LightWhite);
 	virtual ~TreeNode();
 
 	void Render();
@@ -16,7 +17,7 @@ public:
 	// 삽입
 	void Insert(TreeNode* node);
 
-	// 질의
+	// 질의. 특정 영역과 겹치는 모든 노드 반환 함수
 	void Query(const Bounds& queryBounds, std::vector<TreeNode*>& possibleNodes);
 
 	// Getter
@@ -46,6 +47,9 @@ private:
 
 	// 영역
 	Bounds bounds;
+
+	// 욜양. 각 쿼리 노드가 가질 수 있는 노드(객체) 수
+	const int capacity = 0;
 
 	// 현재 노드에 포함된 노드 (배열)
 	std::vector<TreeNode*> points;

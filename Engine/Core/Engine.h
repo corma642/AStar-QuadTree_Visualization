@@ -16,6 +16,9 @@ struct EngineSettings
 	// 콘솔 화면 세로 크기.
 	int height = 0;
 
+	// 쿼드 트리 최대 깊이
+	int depth = 0;
+
 	// 타겟 프레임 속도.
 	float framerate = 0.0f;
 };
@@ -80,6 +83,9 @@ public:
 	// 화면 가로/세로 크기 반환 함수.
 	inline const int Width() const { return settings.width; }
 	inline const int Height() const { return settings.height; }
+
+	// 쿼드 트리 최대 깊이 반환 함수
+	inline const int Depth() const { return settings.depth; }
 
 	// 엔진 종료 함수
 	void Quit();

@@ -354,6 +354,10 @@ void Engine::LoadEngineSettings()
 		{
 			sscanf_s(token, "height = %d", &settings.height);
 		}
+		else if (strcmp(header, "depth") == 0)
+		{
+			sscanf_s(token, "depth = %d", &settings.depth);
+		}
 
 		// 그 다음줄 분리
 		token = strtok_s(nullptr, "\n", &context);

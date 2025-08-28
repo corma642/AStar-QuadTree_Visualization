@@ -8,8 +8,8 @@ Game::Game()
 {
 	instance = this;
 
-	AddLevel(new AStarLevel(5));
-	//AddLevel(new QuadTree);
+	//AddLevel(new AStarLevel(5));
+	AddLevel(new QuadTree);
 }
 
 Game::~Game()

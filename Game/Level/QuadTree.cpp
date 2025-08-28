@@ -5,10 +5,13 @@
 
 QuadTree::QuadTree()
 {
+	// width = 150
+	// height = 47
+
 	width = Engine::Get().Width() - tempWidth;
 	height = Engine::Get().Height();
 
-	root = new TreeNode(Bounds(0, 0, (float)width, (float)height), maxDepth);
+	root = new TreeNode(Bounds(0, 0, (float)width, (float)height), 0);
 }
 
 QuadTree::~QuadTree()
@@ -41,10 +44,10 @@ void QuadTree::Render()
 	}
 }
 
-std::vector<TreeNode*> QuadTree::Query(TreeNode* queryNode)
-{
-	return std::vector<TreeNode*>();
-}
+//std::vector<TreeNode*> QuadTree::Query(TreeNode* queryNode)
+//{
+//	return std::vector<TreeNode*>();
+//}
 
 void QuadTree::IsTickInput()
 {
@@ -57,23 +60,27 @@ void QuadTree::IsTickInput()
 	// 좌클릭: 오브젝트 소환 위치 설정
 	if (Input::Get().GetMouseLeftButton())
 	{
-		Vector2 mousePos = Input::Get().GetMousePosition();
+		Vector2 spawnPos = Input::Get().GetMousePosition();
 
 		// 마우스 위치가 유효한 범위인지 확인
-		if (mousePos.x > 0 && mousePos.x < width - 1 &&
-			mousePos.y > 0 && mousePos.y < height - 1)
+		if (spawnPos.x > 0 && spawnPos.x < width - 1 &&
+			spawnPos.y > 0 && spawnPos.y < height - 1)
 		{
 			// 해당 위치에 이미 오브젝트가 소환된 경우 패스
 			for (const auto& i : spawnObjects)
 			{
-				if (mousePos == i.pos) return;
+				if (spawnPos == i.pos) return;
 			}
 
-			spawnObjects.emplace_back(SpawnObject(mousePos));
-			
+			// 새로운 객체 생성 및 배열에 추가
+			spawnObjects.emplace_back(SpawnObject(spawnPos));
 
-			//root = new TreeNode(Bounds(0, 0, (float)width, (float)height), maxDepth);
-			//Insert()
+			// 단일 문자를 받고 있으니, Bounds 범위를 1x1로 잡음
+			Bounds objBounds((float)spawnPos.x, (float)spawnPos.y, 1.0f, 1.0f);
+
+			// 객체를 TreeNode로 래핑에서, 루트 노드에 삽입
+			TreeNode* objNode = new TreeNode(objBounds);
+			root->Insert(objNode);
 		}
 	}
 }
