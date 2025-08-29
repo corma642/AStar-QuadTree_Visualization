@@ -5,8 +5,19 @@
 
 QuadTree::QuadTree()
 {
-	width = Engine::Get().Width() - tempWidth;
-	height = Engine::Get().Height();
+	width = 130;
+	height = 47;
+
+	//// 기본 콘솔 창 크기 저장
+	//defaultWidth = Engine::Get().Width();
+	//defaultHeight = Engine::Get().Height();
+
+	//// 엔진의 창 크기를 쿼드 트리 콘솔 창 크기로 변경
+	//width = defaultWidth + 50;
+	//height = defaultHeight + 17;
+
+	//// 콘솔 창 크기 설정
+	//SetConsoleWindow(width, height);
 
 	// 시작 depth는 0, owner에 QuadTreeLevel 전달
 	root = new TreeNode(Bounds(0, 0, (float)width, (float)height), 0, Color::LightWhite, this);
@@ -24,6 +35,15 @@ QuadTree::~QuadTree()
 
 	// 루트 노드부터 재귀적으로 쿼드 트리 제거
 	SafeDelete(root);
+}
+
+void QuadTree::SetConsoleWindow(const int newWidth, const int newHeight)
+{
+	// 버퍼 크기 변경 요청
+	Engine::Get().ChangeBufferSizeRequset(newWidth, newHeight);
+
+	// UI 출력할 여백만큼 창 크기 줄임
+	width -= tempWidth;
 }
 
 void QuadTree::SubdivisionCall(TreeNode* node)
@@ -94,7 +114,10 @@ void QuadTree::IsTickInput()
 	// 종료 입력
 	if (Input::Get().GetKeyDown(VK_ESCAPE))
 	{
-		Engine::Get().Quit();
+		// 콘솔 창 기본 크기로 설정
+		//SetConsoleWindow(defaultWidth, defaultHeight);
+
+		Game::Get().ChangeAlgorithmSelectLevel();
 	}
 
 	// 좌클릭: 오브젝트 소환 위치 설정

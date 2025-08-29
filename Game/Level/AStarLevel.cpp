@@ -7,8 +7,10 @@ AStarLevel::AStarLevel(const int currnetRenderSpeed)
 {
 	this->currnetRenderSpeed = currnetRenderSpeed;
 
-	width = Engine::Get().Width() - tempWidth;
-	height = Engine::Get().Height();
+	width = 70;
+	height = 30;
+	//width = Engine::Get().Width() - tempWidth;
+	//height = Engine::Get().Height();
 
 	// A-Star 타이머 기본 설정
 	aStarTimer.Reset();
@@ -245,7 +247,7 @@ void AStarLevel::IsTickBefore()
 	// 종료 입력
 	if (Input::Get().GetKeyDown(VK_ESCAPE))
 	{
-		Engine::Get().Quit();
+		Game::Get().ChangeAlgorithmSelectLevel();
 	}
 }
 
@@ -260,7 +262,7 @@ void AStarLevel::IsTickEnded()
 	// 종료 입력
 	if (Input::Get().GetKeyDown(VK_ESCAPE))
 	{
-		Engine::Get().Quit();
+		Game::Get().ChangeAlgorithmSelectLevel();
 	}
 }
 

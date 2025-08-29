@@ -31,8 +31,8 @@ struct ImageBuffer
 		charInfoArray = new CHAR_INFO[bufferCount];
 		memset(charInfoArray, 0, sizeof(CHAR_INFO) * bufferCount);
 
-		sortingOrderArray = new int[bufferCount];
-		memset(charInfoArray, 0, sizeof(int) * bufferCount);
+        sortingOrderArray = new int[bufferCount];
+        memset(sortingOrderArray, 0xFF, sizeof(int) * bufferCount);
 	}
 
 	~ImageBuffer()
@@ -74,13 +74,16 @@ public:
 	// 레벨 추가 함수
 	void AddLevel(Level* newLevel);
 
-	// 레벨 변경 함수.
+	// 레벨 변경 함수
 	void ChangeLevel(Level* newLevel);
+
+	// 화면 크기 변경 요청 함수
+	void ChangeBufferSizeRequset(const int newWidth, const int newHeight);
 
 	// 메모리 해제 함수
 	virtual void CleanUp();
 
-	// 화면 가로/세로 크기 반환 함수.
+	// 화면 가로/세로 크기 반환 함수
 	inline const int Width() const { return settings.width; }
 	inline const int Height() const { return settings.height; }
 
@@ -97,11 +100,20 @@ protected:
 	// 콘솔 관련 초기화 함수
 	void OnConsoleInitialize();
 
+	// 버퍼 관련 초기화 함수
+	void OnBufferInitialize();
+
+	// 버퍼 크기 변경 함수
+	void ChangeBufferSize();
+
 	void BeginPlay();
 	void Tick(float deltaTime = 0.0f);
 
 	// 화면 지우는 함수 (전체를 빈 문자열로 설정).
 	void Clear();
+
+	// 화면 지우는 함수 (설정 값으로 전체를 빈 문자열로 설정 후 한 번 출력)
+	void DefaultClear();
 
 	// 액터 그리기 함수 (백버퍼에 기록).
 	void Render();
@@ -142,6 +154,12 @@ protected:
 
 	// 변경 요청된 레벨 정보.
 	Level* changeRequestedLevel = nullptr;
+
+	// 화면 크기 변경 요청됐는지 여부를 확인하는 변수
+	bool changeBufferSizeRequested = false;
+
+	// 화면 크기가 변경되면, 현재 프레임은 렌더를 건너 뜀
+	bool passFrame = false;
 
 	// 엔진 설정
 	EngineSettings settings;

@@ -167,6 +167,7 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Level\AlgorithmSelectLevel.cpp" />
     <ClCompile Include="Level\QuadTree.cpp" />
     <ClCompile Include="Utils\Bounds.cpp" />
     <ClCompile Include="Level\AStarLevel.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="Utils\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Level\AlgorithmSelectLevel.h" />
     <ClInclude Include="Level\QuadTree.h" />
     <ClInclude Include="Utils\Bounds.h" />
     <ClInclude Include="Level\AStarLevel.h" />

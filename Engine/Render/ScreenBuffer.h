@@ -17,6 +17,9 @@ public:
 	// 소멸자.
 	~ScreenBuffer();
 
+	// 런 타임 버퍼 사이즈 교체 함수
+	void ChangeBufferSize(const int newWidth, const int newHeight);
+
 	// 버퍼 지우기.
 	void Clear();
 

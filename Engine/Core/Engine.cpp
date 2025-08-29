@@ -23,24 +23,19 @@ BOOL WINAPI ConsoleMessageProcedure(DWORD CtrlType)
 
 Engine::Engine()
 {
+	// 힙 영역에 문제가 생긴 경우 확인하는 어서트
+	if (_heapchk() != _HEAPOK)
+	{
+		__debugbreak();
+	}
+
 	instance = this;
 
 	// 엔진 설정 로드
 	LoadEngineSettings();
 
-	// 이미지 버퍼 생성 / 콘솔에 보낼 버퍼 생성
-	Vector2 screenSize(settings.width, settings.height);
-	imageBuffer = new ImageBuffer((screenSize.x + 1) * screenSize.y + 1);
-
-	// 이미지 버퍼 초기화
-	ClearImageBuffer();
-
-	// 두 개의 버퍼 생성
-	renderTargets[0] = new ScreenBuffer(GetStdHandle(STD_OUTPUT_HANDLE), screenSize);
-	renderTargets[1] = new ScreenBuffer(screenSize);
-
-	// 버퍼 교환.
-	Present();
+	// 버퍼 관련 초기화
+	OnBufferInitialize();
 
 	// cls 호출.
 	system("cls");
@@ -63,6 +58,20 @@ void Engine::OnConsoleInitialize()
 
 	// 콘솔 창 이벤트 등록
 	SetConsoleCtrlHandler(ConsoleMessageProcedure, TRUE);
+}
+
+void Engine::OnBufferInitialize()
+{
+	// 이미지 버퍼 생성 / 콘솔에 보낼 버퍼 생성
+	Vector2 screenSize(settings.width, settings.height);
+	imageBuffer = new ImageBuffer((screenSize.x + 1) * screenSize.y + 1);
+
+	// 이미지 버퍼 초기화
+	ClearImageBuffer();
+
+	// 두 개의 버퍼 생성
+	renderTargets[0] = new ScreenBuffer(GetStdHandle(STD_OUTPUT_HANDLE), screenSize);
+	renderTargets[1] = new ScreenBuffer(screenSize);
 }
 
 void Engine::Run()
@@ -138,6 +147,13 @@ void Engine::Run()
 				changeRequestedLevel = nullptr;
 				levelChangeRequested = false;
 			}
+
+			// 화면 크기 변경 요청이 었었으면 처리.
+			if (changeBufferSizeRequested)
+			{
+				ChangeBufferSize();
+				changeBufferSizeRequested = false;
+			}
 		}
 	}
 
@@ -186,6 +202,21 @@ void Engine::ChangeLevel(Level* newLevel)
 	changeRequestedLevel = newLevel;
 }
 
+void Engine::ChangeBufferSizeRequset(const int newWidth, const int newHeight)
+{
+	// 화면 크기 변경 요청 플래그 설정.
+	changeBufferSizeRequested = true;
+
+	// 프레임 건너뛰기 활성화
+	passFrame = true;
+
+	DefaultClear();
+
+	// 세팅 값 변경
+	settings.width = newWidth;
+	settings.height = newHeight;
+}
+
 void Engine::CleanUp()
 {
 	// 레벨 제거
@@ -208,6 +239,23 @@ void Engine::Quit()
 Engine& Engine::Get()
 {
 	return *instance;
+}
+
+void Engine::ChangeBufferSize()
+{
+	SafeDelete(imageBuffer);
+
+	Vector2 screenSize(settings.width, settings.height);
+	imageBuffer = new ImageBuffer((screenSize.x + 1) * screenSize.y + 1);
+
+
+	renderTargets[0]->ChangeBufferSize(settings.width, settings.height);
+	renderTargets[1]->ChangeBufferSize(settings.width, settings.height);
+	
+	ClearImageBuffer();
+
+	renderTargets[0]->Clear();
+	renderTargets[1]->Clear();
 }
 
 void Engine::BeginPlay()
@@ -234,8 +282,24 @@ void Engine::Clear()
 	GetRenderer()->Clear();
 }
 
+void Engine::DefaultClear()
+{
+	Clear();
+
+	// 백버퍼에 데이터 쓰기.
+	GetRenderer()->Render(imageBuffer->charInfoArray);
+
+	Present();
+}
+
 void Engine::Render()
 {
+	if (passFrame)
+	{
+		passFrame = false;
+		return;
+	}
+
 	// 화면 지우기.
 	Clear();
 

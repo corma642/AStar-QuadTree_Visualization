@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Level/AlgorithmSelectLevel.h"
 #include "Level/AStarLevel.h"
 #include "Level/QuadTree.h"
 
@@ -8,8 +9,7 @@ Game::Game()
 {
 	instance = this;
 
-	//AddLevel(new AStarLevel(5));
-	AddLevel(new QuadTree);
+	AddLevel(new AlgorithmSelectLevel());
 }
 
 Game::~Game()
@@ -17,16 +17,19 @@ Game::~Game()
 	Engine::CleanUp();
 }
 
+void Game::ChangeAlgorithmSelectLevel()
+{
+	ChangeLevel(new AlgorithmSelectLevel());
+}
+
 void Game::StartAStar(const int currnetRenderSpeed)
 {
-	Level* newAStarLevel = new AStarLevel(currnetRenderSpeed);
-	ChangeLevel(newAStarLevel);
+	ChangeLevel(new AStarLevel(currnetRenderSpeed));
 }
 
 void Game::StartQuadTree()
 {
-	Level* newQuadTreeLevel = new QuadTree();
-	ChangeLevel(newQuadTreeLevel);
+	ChangeLevel(new QuadTree());
 }
 
 Game& Game::Get()

@@ -22,6 +22,9 @@ public:
 	QuadTree();
 	virtual ~QuadTree();
 
+	// 콘솔 창 크기 설정 함수
+	void SetConsoleWindow(const int newWidth, const int newHeight);
+
 	virtual void Tick(float deltaTime) override;
 	virtual void Render() override;
 
@@ -35,12 +38,19 @@ public:
 	float GetSubdivInterval() const { return subdivInterval; }
 
 private:
-	// 콘솔 창 크기
+	// 기본 콘솔 창 크기
+	int defaultWidth = 0;
+	int defaultHeight = 0;
+
+	// 쿼드 트리 콘솔 창 크기
 	int width = 0;
 	int height = 0;
 
 	// 여백 (텍스트 출력용)
 	int tempWidth = 20;
+
+	// 화면 크기가 변경되면, 현재 프레임은 렌더를 건너 뜀
+	bool passFrame = false;
 
 	// 조작 입력 받는 함수
 	void IsTickInput();

@@ -56,6 +56,24 @@ ScreenBuffer::~ScreenBuffer()
 	}
 }
 
+void ScreenBuffer::ChangeBufferSize(const int newWidth, const int newHeight)
+{
+	screenSize = { newWidth, newHeight };
+
+	// 콘솔 버퍼 크기 설정.
+	SetConsoleScreenBufferSize(buffer, Vector2(screenSize.x, screenSize.y));
+	SMALL_RECT rect{ 0, 0, (short)screenSize.x, (short)screenSize.y };
+
+	// 콘솔 창 크기 설정.
+	SetConsoleWindowInfo(buffer, true, &rect);
+
+	CONSOLE_SCREEN_BUFFER_INFOEX bufferInfo = {};
+	GetConsoleScreenBufferInfoEx(buffer, &bufferInfo);
+	bufferInfo.dwSize.X = screenSize.x + 1;
+	bufferInfo.dwSize.Y = screenSize.y + 1;
+	SetConsoleScreenBufferInfoEx(buffer, &bufferInfo);
+}
+
 void ScreenBuffer::Clear()
 {
 	// 커서 위치.
