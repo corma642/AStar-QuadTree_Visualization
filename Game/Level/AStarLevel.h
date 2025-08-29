@@ -11,14 +11,13 @@
 struct Node
 {
 	Node(double inFCost = 0.0, double inGCost = 0.0, Vector2 inPos = Vector2::Out)
-		: fCost(inFCost), gCost(inGCost), pos(inPos)
-	{
+		: fCost(inFCost), gCost(inGCost), pos(inPos) {
 	}
 
-	// 시작 위치에서 목표 위치까지의 비용 + 목표 위지까지의 거리
+	// 시작 위치에서 현재 위치까지의 비용 + 목표 까지의 예상 비용(휴리스틱)
 	double fCost; // f = g + h
 
-	// 시작 위치에서 목표 위치까지의 비용
+	// 시작 위치에서 현재 위치까지의 비용
 	double gCost;
 
 	// 노드 위치
@@ -34,20 +33,29 @@ struct CompareNode
 	}
 };
 
-// 휴리스틱 (유클리드 기법 사용 / 대각선 고려)
-inline double Heuristic(const Vector2& a, const Vector2& b, double orthCost, double diagCost)
+// 휴리스틱 함수
+inline double Heuristic(
+	const Vector2& a,	// 현재 위치
+	const Vector2& b,	// 도작 위치
+	double orthCost,	// 직선 이동 비용
+	double diagCost)	// 대각선 이동 비용
 {
-	// 정수 좌표 차이
-	double dx = static_cast<double>(a.x - b.x);
-	double dy = static_cast<double>(a.y - b.y);
+	// 맨해튼 거리 측정
+	//double dx = static_cast<double>(std::abs(a.x - b.x));
+	//double dy = static_cast<double>(std::abs(a.y - b.y));
+	//return static_cast<double>(dx + dy) * orthCost;
 
-	// 유클리드 거리
-	double dist = std::sqrt(dx * dx + dy * dy);
 
-	// 단일축 이동 비용 vs 대각선 비용을 길이로 나눈 값
-	double cost = min(orthCost, diagCost / std::sqrt(2.0));
+	// 유클리드 거리 측정
+	//double dx = std::abs(a.x - b.x);
+	//double dy = std::abs(a.y - b.y);
+	//return std::sqrt(dx * dx + dy * dy) * orthCost;
 
-	return dist * cost;
+
+	// 옥타일 거리 측정
+	double dx = std::abs(a.x - b.x);
+	double dy = std::abs(a.y - b.y);
+	return diagCost * min(dx, dy) + orthCost * (max(dx, dy) - min(dx, dy));
 }
 
 // A-Star 시각화 상태
