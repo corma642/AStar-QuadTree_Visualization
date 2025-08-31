@@ -3,6 +3,8 @@
 #include "utils/utils.h"
 #include "Utils/RenderSpeed.h"
 
+#include <algorithm>
+
 AStarLevel::AStarLevel(const int currnetRenderSpeed)
 {
 	this->currnetRenderSpeed = currnetRenderSpeed;

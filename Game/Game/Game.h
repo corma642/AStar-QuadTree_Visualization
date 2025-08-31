@@ -14,7 +14,7 @@ public:
 	void ChangeAlgorithmSelectLevel();
 
 	// A-Star 레벨 시작 함수
-	void StartAStar(const int currnetRenderSpeed = 3);
+	void StartAStar(const int currnetRenderSpeed = 9);
 
 	// QuadTree 레벨 시작 함수
 	void StartQuadTree();

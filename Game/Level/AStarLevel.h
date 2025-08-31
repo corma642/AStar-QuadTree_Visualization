@@ -55,7 +55,10 @@ inline double Heuristic(
 	// 옥타일 거리 측정
 	double dx = std::abs(a.x - b.x);
 	double dy = std::abs(a.y - b.y);
-	return diagCost * min(dx, dy) + orthCost * (max(dx, dy) - min(dx, dy));
+
+	double diag = diagCost * min(dx, dy);
+	double orth = orthCost * (max(dx, dy) - min(dx, dy));
+	return diag + orth;
 }
 
 // A-Star 시각화 상태
